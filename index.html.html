@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- IBM Plex Sans -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700;800&display=swap">
+
+  <style>
+
+/* IBM Plex Sans (headers + labels) */
+#day,
+.section-title,
+.brand .addr,
+.label{
+  font-family: var(--sans);
+}
+
+@page{
+  size: 5.8in 8.3in;
+  margin: 0;
+}
+
+:root{
+  --ink:#111;
+  --rule:#222;
+
+  --side-gap: 12px;      /* ✅ adjust this to move BUS/DRIVERS closer/farther */
+  --side-width: 200px;   /* width of BUS / DRIVERS columns */
+  --outer-pad: 10px;     /* padding around the whole layout */
+
+  /* single unified line weight */
+  --border: 1px;
+
+  --pad: 0.16in;
+  --panel-pad: 0.10in;
+  --footer-safe: 0in;
+
+  --sans: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+
+  --label-size: 0.105in;  /* tiny bump = cleaner balance */
+  --tiny-size: 0.096in;
+  --input-size: 0.16in;
+
+  --underline: 1px dotted rgba(0,0,0,.35);
+
+  --pickup:#E0442E;
+  --exp-row-h: 0.34in;
+  --notes-h: 0.30in;
+
+  --section-gap: 0.06in;
+
+  --side-gap: 12px; /* ✅ adjust this number anytime */
+
+
+}
+
+/* sample-filled text should look normal (not placeholder blue) */
+.sample-fill{
+  color: var(--ink);
+  font-style: normal;
+  letter-spacing: normal;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ===== Controls ===== */
+.controls{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:12px 10px;
+}
+
+/* top status line */
+.controls-meta{
+  font-size:12px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:#444;
+}
+
+/* button row */
+.controls-buttons{
+  display:flex;
+  flex-direction:column;
+  gap:8px;               /* space between rows */
+  align-items:center;
+}
+
+.controls-buttons .btn-row{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.controls button{
+  padding:7px 12px;
+  border:1px solid #d6d6d6;
+  background:#fff;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+/* ===== Layout (side lists) ===== */
+.layout{
+  display:flex;
+  justify-content:center;     /* keeps the whole 3-column layout centered */
+  align-items:flex-start;
+  gap: var(--side-gap);       /* ✅ adjustable gap */
+  padding: var(--outer-pad);  /* prevents clipping on the screen edges */
+  flex-wrap: nowrap;          /* prevents drivers dropping weirdly */
+}
+.side{
+  flex: 0 0 var(--side-width);  /* ✅ fixed width; will NOT collapse */
+  width: var(--side-width);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+
+  max-height: calc(8.1in + 80px);
+  overflow:auto;
+
+  padding-right: 0;             /* ✅ keeps it tight to the envelope */
+}
+.side-title{
+  font-family: var(--sans);
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:0.12em;
+  text-align:center;
+  margin-bottom:4px;
+}
+/* only style DRIVER buttons by default (NOT bus buttons) */
+.side .driver-btn{
+  padding:8px 6px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  background:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* ============================= */
+/* DRIVERS – 2 EQUAL COLUMNS     */
+/* toggle aligns with columns    */
+/* ============================= */
+
+.driver-grid{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+/* Toggle row = 2 equal columns */
+.driver-mode{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
+}
+
+/* Toggle buttons fill columns */
+.driver-mode .mode{
+  width:100%;
+  padding:8px 6px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  background:#fff;
+  font-weight:800;
+  font-size:12px;
+  cursor:pointer;
+  text-align:center;
+}
+
+.driver-mode .mode.active{
+  background:#111;
+  color:#fff;
+  border-color:#111;
+}
+
+/* Driver buttons = 2 equal columns */
+#driverList{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 🔒 hard equal columns */
+  gap: 8px;
+}
+
+#driverList .driver-btn{
+  width: 100%;
+  min-width: 0;          /* 🔒 prevents text-based expansion */
+  box-sizing: border-box;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ===== Bus Buttons ===== */
+.bus-btn{
+  font-weight:600;          /* ← normal / semi-bold */
+  border:1px solid #ccc;
+  border-radius:10px;
+  padding:8px 6px;
+  cursor:pointer;
+}
+
+.bus-btn, .driver-btn, .driver-mode .mode{
+  touch-action: manipulation;
+}
+
+/* Highlight selected bus (disabled) */
+/*
+.bus-btn.selected{
+  box-shadow: inset 0 0 0 1.5px #000;
+}
+*/
+
+.bus-btn:active{
+  transform:scale(0.97);
+}
+
+/* ===== Bus colors (muted, professional) ===== */
+
+/* Charcoal (218, 763) */
+.bus-charcoal{
+  background:#e3e3e3 !important;
+  border-color:#7a7a7a;
+  color:#111;
+}
+
+/* Black (470, 506) */
+.bus-black{
+  background:#dcdcdc !important;
+  border-color:#444;
+  color:#111;
+}
+
+/* Yellow (133) */
+.bus-yellow{
+  background:#fff1b8 !important;
+  border-color:#d6b400;
+  color:#111;
+}
+
+/* Gold (746) */
+.bus-gold{
+  background:#f3e6b3 !important;
+  border-color:#c8a63a;
+  color:#111;
+}
+
+/* Teal (607) */
+.bus-teal{
+  background:#dff2ef !important;
+  border-color:#3b8f86;
+  color:#111;
+}
+
+/* White (897, 898) */
+.bus-white{
+  background:#f9f9f9 !important;
+  border-color:#cfcfcf;
+  color:#111;
+}
+
+/* Red (474) */
+.bus-red{
+  background:#f6dada !important;
+  border-color:#b24a4a;
+  color:#111;
+}
+
+.bus-btn{
+  background: #fff !important;
+  border-color: #ccc !important;
+  color: #111 !important;
+}
+
+/* ===== Selected bus (match outline system) ===== */
+.bus-btn.selected{
+  background: #111 !important;
+  color: #fff !important;
+  border: 1px solid #ccc !important;
+}
+
+/* ===== Highlight selected driver ===== */
+.driver-btn.selected{
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+/* ===== Selected DRIVER ===== */
+.driver-btn.selected-driver{
+  background:#111;
+  color:#fff;
+  border-color:#111;
+}
+
+/* ===== Selected CO-DRIVER ===== */
+.driver-btn.selected-codriver{
+  background:#444;
+  color:#fff;
+  border-color:#444;
+}
+
+/* ===== Page ===== */
+.page{
+  width:5.8in;
+  height:8.1in;   /* printer-safe */
+  padding: var(--pad);
+  margin: 0;   /* ✅ let flex handle positioning */
+  overflow: hidden; /* extra safety against spill */
+}
+
+.panel{
+  width:100%;
+  height:100%;
+  padding: var(--panel-pad);
+  padding-top: calc(var(--panel-pad) + 0.25in); /* top offset */
+  padding-bottom: var(--panel-pad);
+
+  display:flex;
+  flex-direction:column;
+  gap: var(--section-gap);
+}
+
+/* ===== Text ===== */
+.label,.tiny{
+  font-family: var(--mono);
+  font-weight:700;
+  text-transform:uppercase;
+  white-space:nowrap;
+
+}
+.label{
+  font-size:var(--label-size);
+  letter-spacing:0.12em;
+}
+.tiny{
+  font-size:var(--tiny-size);
+  letter-spacing:0.07em;
+  opacity:.9;
+}
+
+/* ===== Inputs ===== */
+
+input::placeholder{
+  color:#8b1e1e;           /* warning red */
+  background:#fde8e8;      /* soft red tint */
+  font-style:bold;
+  letter-spacing:0.04em;
+  padding:0 2px;
+  border-radius:2px;
+}
+#day::placeholder{
+  color:#8b1e1e;           /* same warning red */
+  background:#fde8e8;      /* same soft red tint */
+  font-style:bold;
+  letter-spacing:0.04em;
+  padding:0 4px;           /* a little extra so it “reads” like a tag */
+  border-radius:3px;
+}
+input.edit{
+  font-family: var(--sans);
+  font-weight:700;
+  font-size: var(--input-size);
+  border:none;
+  background:transparent;
+  width:100%;
+  min-height:0.17in;
+}
+input.edit.under{
+  border-bottom: none;
+}
+input:focus{ outline:none; }
+
+/* ===== Header (FIXED CENTERING) ===== */
+.header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:0.04in;
+  margin-bottom: 0.06in; /* NEW: breathing room before section title */
+}
+#day{
+  display:block;
+  margin:0 auto;
+  font-family: var(--mono);
+  font-weight:900;
+  font-size:0.46in;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  text-align:center;
+}
+.brand img{ height:0.42in; }
+.brand .addr{
+  font-family: var(--mono);
+  font-size:0.11in;
+  font-weight:800;
+  line-height:1.2;
+}
+
+/* ===== Titles ===== */
+.section-title{
+  text-align:center;
+  font-weight:900;
+  letter-spacing:0.14em; /* tighter = sharper print */
+  font-size:0.18in;
+}
+
+/* ===== Trip ===== */
+.trip{ border: none; }
+.trip-row{
+  display:grid;
+  border-top: var(--border) solid var(--rule);
+}
+.trip-row:first-child{ border-top:none; }
+
+.cols-3{ grid-template-columns:.9fr 1.25fr 1.1fr; }
+.cols-2{ grid-template-columns:1.25fr 1fr; }
+.cols-1{ grid-template-columns:1fr; }
+
+.trip-cell{
+  padding:0.045in .08in;
+  border-left: var(--border) solid var(--rule);
+  display:flex;
+  flex-direction:column;
+  gap:.03in;
+}
+.trip-cell:first-child{ border-left:none; }
+
+/* Pickup */
+.pickup-field{ display:flex; flex-direction:column; gap:.03in; }
+.pickup-tag{
+  background:var(--pickup);
+  padding:.035in .055in;
+  font-family:var(--mono);
+  font-weight:900;
+  font-size:var(--label-size);
+  letter-spacing:.08em;
+}
+/* ===== Trip + Contact wrapper ===== */
+.trip-contact{
+  border: var(--border) solid var(--rule);
+}
+
+/* remove inner box borders */
+.trip{ border:none; }
+.trip-contact .grid{ border:none; }  /* only the contact grid loses border */
+
+/* ===== Contact (grid rows inside trip-contact) ===== */
+.grid-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-top: var(--border) solid var(--rule);
+}
+.grid-row:first-child{ border-top:none; }
+
+.grid-cell{
+  padding:.045in .08in;
+  border-left: var(--border) solid var(--rule);
+  display:flex;
+  flex-direction:column;
+  gap:.03in;
+}
+.grid-cell:first-child{ border-left:none; }
+
+/* divider between DESTINATION and CONTACT */
+.trip-contact .grid-row:first-child{
+  border-top: var(--border) solid var(--rule);
+}
+
+/* ODOMETER separate box */
+.odometer-box{
+  border: var(--border) solid var(--rule);
+  margin-top: 0;
+}
+
+/* ===== Expenses ===== */
+.mini{ border: none; }
+
+.mini table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-family:var(--mono);
+  border: var(--border) solid var(--rule);  /* ✅ ADD THIS */
+}
+.mini tr{ height:var(--exp-row-h); }
+.mini td{
+  border: var(--border) solid var(--rule);
+  padding:.022in .07in;
+  vertical-align:middle;
+
+  /* NOTE TO SELF: ELD FONT SIZE */
+
+  font-size:.12in;
+
+  line-height:1.05;
+  white-space:nowrap;
+}
+
+/* ✅ CLEAN $ COLUMN: no inner underline/box */
+.money{
+  display:flex;
+  align-items:center;
+  gap:.06in;
+  width:100%;
+}
+.money .dollar{ font-weight:900; }
+.money .amount-space{ flex:1; height:.16in; }
+
+.notes{
+  display:grid;
+  grid-template-columns:.9in 1fr;
+  gap:.08in;
+}
+#notes{ min-height:var(--notes-h); }
+
+/* lock section alignment */
+.trip,
+.grid,
+.mini,
+.footer{
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* === Uniform spacing between major sections === */
+.trip-contact,
+.odometer-box,
+.mini,
+.footer{
+  margin: 0; /* prevent uneven spacing */
+}
+
+.notes-lines{
+  display:flex;
+  flex-direction:column;
+  gap:0.03in;
+  margin-top:0.02in;
+}
+
+.note-line{
+  font-family: var(--mono);
+  font-size: 0.13in;              /* smaller than main inputs */
+  font-weight:700;
+  height:0.16in;                  /* LOCKED LINE HEIGHT */
+  border:none;
+  border-bottom: var(--underline);
+  padding:0 0.02in;
+}
+
+/* ===== PRINT BOUNDARY DEBUG (TOGGLED) ===== */
+.show-bounds .page{
+  outline: 2px dashed red;
+  outline-offset: -2px;
+}
+
+.show-bounds .page::after{
+  content:"";
+  position:absolute;
+  inset: 0.18in; /* SAFE AREA */
+  border: 1px dotted blue;
+  pointer-events:none;
+}
+/* ===== Envelope preview (screen only) ===== */
+.show-envelope .page{
+  background: #e9cd86; /* warmer manila */
+  background-image:
+    radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,.22), rgba(255,255,255,0));
+  background-size: 6px 6px, 100% 100%;
+}
+
+/* keep text readable */
+.show-envelope .panel{
+  background: transparent;
+}
+
+.page{
+  position:relative;
+}
+
+/* Never print guides */
+@media print{
+  body{ margin:0; }
+
+  .layout{
+    padding:0;
+    gap:0;
+  }
+
+  .page{
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .controls,
+  .side{
+    display:none;
+  }
+
+  /* Never print guides */
+  .show-bounds .page{
+    outline:none;
+  }
+  .show-bounds .page::after{
+    content:none;
+  }
+
+  /* Never print envelope preview */
+  .show-envelope .page{
+    background: transparent !important;
+  }
+}
+
+</style>
+</head>
+<body class="show-envelope">
+
+<div class="controls">
+  <div class="controls-meta">Paper A5 · Scale Default · Margins Default</div>
+
+  <div class="controls-buttons">
+  <!-- Row 1: utilities -->
+  <div class="btn-row">
+    <button type="button" onclick="safePrint()">Print</button>
+    <button type="button" onclick="clearAll()">Clear Form</button>
+    <button type="button" onclick="toggleBounds()">Show Print Bounds</button>
+    <button type="button" onclick="toggleEnvelope()">Envelope Preview</button>
+  </div>
+
+  <!-- Row 2: quick fill -->
+  <div class="btn-row">
+  <button type="button" onclick="loadSample()">Kickapoo Trip</button>
+
+  <button type="button" onclick="fillToday()">Today</button>
+  <button type="button" onclick="fillTomorrow()">Tomorrow</button>
+
+  <button type="button" onclick="fillNextWeekday(6)">Saturday</button>
+  <button type="button" onclick="fillNextWeekday(0)">Sunday</button>
+  <button type="button" onclick="fillNextWeekday(1)">Monday</button>
+</div>
+</div>
+</div>
+<div class="layout">
+
+  <!-- LEFT: BUS LIST -->
+<aside class="side side-left">
+  <div class="side-title">BUSES</div>
+
+  <button class="bus-btn bus-charcoal" type="button" onclick="setBus('218', this)">218</button>
+  <button class="bus-btn bus-charcoal" type="button" onclick="setBus('763', this)">763</button>
+
+  <button class="bus-btn bus-black" type="button" onclick="setBus('470', this)">470</button>
+  <button class="bus-btn bus-yellow" type="button" onclick="setBus('133', this)">133</button>
+  <button class="bus-btn bus-black" type="button" onclick="setBus('506', this)">506</button>
+
+  <button class="bus-btn bus-gold" type="button" onclick="setBus('746', this)">746</button>
+  <button class="bus-btn bus-teal" type="button" onclick="setBus('607', this)">607</button>
+
+  <button class="bus-btn bus-white" type="button" onclick="setBus('897', this)">897</button>
+  <button class="bus-btn bus-white" type="button" onclick="setBus('898', this)">898</button>
+
+  <button class="bus-btn bus-red" type="button" onclick="setBus('474', this)">474</button>
+</aside>
+
+  <div class="page">
+  <div class="panel">
+
+  <div class="header">
+    <input id="day" class="edit" placeholder="ENTER DAY">
+    <div class="brand">
+      <img src="logo.png" alt="Logo">
+      <div class="addr">
+        2801 Zinnia Ave. McAllen TX 78504<br>
+        (956) 994-1169 / Fax 994-9491 / Cell 648-9691
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">TRIP INFORMATION</div>
+
+<div class="trip-contact">
+  <div class="trip">
+    <!-- BUS/DRIVER/CO-DRIVER row -->
+    <div class="trip-row cols-3">
+  <div class="trip-cell">
+    <span class="label">BUS #</span>
+    <input id="busno" class="edit under" placeholder="CHOOSE BUS">
+  </div>
+  <div class="trip-cell">
+    <span class="label">BUS DRIVER</span>
+    <input id="driver" class="edit under" placeholder="ASSIGN DRIVER">
+  </div>
+  <div class="trip-cell">
+    <span class="label">CO-DRIVER</span>
+    <input id="codriver" class="edit under">
+  </div>
+</div>
+
+    <!-- DATE/TIME row -->
+    <div class="trip-row cols-2">
+  <div class="trip-cell">
+    <span class="label">TRIP DATE</span>
+    <input id="tripdate" class="edit under" placeholder="CHOOSE DATE">
+  </div>
+  <div class="trip-cell">
+    <span class="label">ARRIVAL TIME</span>
+    <input id="arrivaltime" class="edit under" placeholder="ENTER ARRIVAL TIME">
+
+  </div>
+</div>
+
+    <!-- PICKUP -->
+    <div class="trip-row cols-1">
+      <div class="trip-cell"><span class="label">PICK UP ADDRESS</span><input id="pickup" class="edit under" placeholder="ENTER PICKUP ADDRESS">
+</div>
+    </div>
+
+    <!-- DESTINATION -->
+    <div class="trip-row cols-1">
+      <div class="trip-cell"><span class="label">DESTINATION</span><input id="destination" class="edit under" placeholder="ENTER DESTINATION">
+</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="grid-row">
+      <div class="grid-cell"><span class="label">CONTACT</span><input id="contact" class="edit under" placeholder="ENTER CONTACT NAME">
+</div>
+      <div class="grid-cell"><span class="label">PHONE</span><input id="phone" class="edit under" placeholder="ENTER PHONE #">
+</div>
+    </div>
+  </div>
+</div>
+
+<!-- Separate ODOMETER box -->
+<div class="grid odometer-box">
+  <div class="grid-row">
+    <div class="grid-cell"><span class="label">STARTING ODOMETER</span><input id="startodo" class="edit under"></div>
+    <div class="grid-cell"><span class="label">ENDING ODOMETER</span><input id="endodo" class="edit under"></div>
+  </div>
+</div>
+
+  <div class="mini">
+  <table>
+    <tr>
+      <td>ELD BACKUP USED</td><td>YES / NO</td><td>DIESEL/BLUE DEF</td>
+      <td><div class="money"><span class="dollar">$</span><span class="amount-space"></span></div></td>
+    </tr>
+    <tr>
+      <td>ELD VERIFIED</td><td>DRIVER / OFFICE</td><td>HOTEL</td>
+      <td><div class="money"><span class="dollar">$</span><span class="amount-space"></span></div></td>
+    </tr>
+    <tr>
+      <td>CC FOR TRIP</td><td>YES / NO</td><td>REPAIRS</td>
+      <td><div class="money"><span class="dollar">$</span><span class="amount-space"></span></div></td>
+    </tr>
+    <tr>
+      <td colspan="2">CC RECEIVED BY</td><td>MISCELLANEOUS</td>
+      <td><div class="money"><span class="dollar">$</span><span class="amount-space"></span></div></td>
+    </tr>
+    <tr>
+      <td colspan="2">TOTAL TRIP MILES</td><td>TOTAL</td>
+      <td><div class="money"><span class="dollar">$</span><span class="amount-space"></span></div></td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="footer">
+    <span class="label">NOTES</span>
+    <div class="notes-lines">
+      <input class="edit note-line" id="notes1">
+      <input class="edit note-line" id="notes2">
+      <input class="edit note-line" id="notes3">
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+<!-- RIGHT: DRIVER LIST -->
+<aside class="side side-right">
+  <div class="side-title">DRIVERS</div>
+
+  <div class="driver-grid">
+
+    <div class="driver-mode">
+      <button type="button" id="fillDriverBtn" class="mode active" onclick="setDriverMode('driver')">Driver</button>
+      <button type="button" id="fillCoDriverBtn" class="mode" onclick="setDriverMode('codriver')">Co-Driver</button>
+    </div>
+
+    <div id="driverList">
+      <button class="driver-btn" type="button" onclick="setDriver('George')">George</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Isaias')">Isaias</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Jorge')">Jorge</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Raul')">Raul</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Veronica')">Veronica</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Andy')">Andy</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Arredondo')">Arredondo</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Cortinas')">Cortinas</button>
+      <button class="driver-btn" type="button" onclick="setDriver('David')">David</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Felipe')">Felipe</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Guillermo')">Guillermo</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Maria')">Maria</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Martinez')">Martinez</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Noe')">Noe</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Oscar')">Oscar</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Prudenciano')">Prudenciano</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Rigo')">Rigo</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Salim')">Salim</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Sanchez')">Sanchez</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Agustin')">Agustin</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Benny')">Benny</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Garza')">Garza</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Griselda')">Griselda</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Ivan')">Ivan</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Jay')">Jay</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Jonathan')">Jonathan</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Jose')">Jose</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Juan')">Juan</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Julie')">Julie</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Miguel')">Miguel</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Hector')">Hector</button>
+      <button class="driver-btn" type="button" onclick="setDriver('Jose P')">Jose P</button>
+    </div>
+
+  </div>
+</aside>
+
+</div>
+
+<script>
+function setBus(busNo, btn){
+  const busEl = document.getElementById('busno');
+  if(busEl) busEl.value = busNo;
+
+  document.querySelectorAll('.bus-btn')
+    .forEach(b => b.classList.remove('selected'));
+
+  if(btn) btn.classList.add('selected');
+}
+
+let driverFillTarget = 'driver';
+
+function setDriverMode(target){
+  driverFillTarget = target;
+
+  const d = document.getElementById('fillDriverBtn');
+  const c = document.getElementById('fillCoDriverBtn');
+  if(d && c){
+    d.classList.toggle('active', target === 'driver');
+    c.classList.toggle('active', target === 'codriver');
+  }
+}
+
+function setDriver(name){
+  const targetEl = document.getElementById(driverFillTarget);
+  if(targetEl) targetEl.value = name.toUpperCase();
+
+  const buttons = document.querySelectorAll('#driverList .driver-btn');
+
+  if(driverFillTarget === 'driver'){
+    buttons.forEach(b => b.classList.remove('selected-driver'));
+  } else {
+    buttons.forEach(b => b.classList.remove('selected-codriver'));
+  }
+
+  const btn = [...buttons].find(
+    b => b.textContent.trim() === name
+  );
+
+  if(btn){
+    if(driverFillTarget === 'driver'){
+      btn.classList.add('selected-driver');
+    } else {
+      btn.classList.add('selected-codriver');
+    }
+  }
+}
+
+function fillToday(){
+  const dayEl = document.getElementById('day');
+  const dateEl = document.getElementById('tripdate');
+
+  const today = new Date();
+
+  if(dayEl){
+    dayEl.value = today.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+  }
+
+  if(dateEl){
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    dateEl.value = `${mm}/${dd}/${yyyy}`;
+  }
+}
+
+function fillTomorrow(){
+  const dayEl = document.getElementById('day');
+  const dateEl = document.getElementById('tripdate');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if(dayEl){
+    dayEl.value = tomorrow.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+  }
+
+  if(dateEl){
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    const yyyy = tomorrow.getFullYear();
+    dateEl.value = `${mm}/${dd}/${yyyy}`;
+  }
+}
+
+function fillNextWeekday(targetDow){
+  const dayEl = document.getElementById('day');
+  const dateEl = document.getElementById('tripdate');
+
+  const d = new Date();
+  const todayDow = d.getDay();
+
+  let add = (targetDow - todayDow + 7) % 7;
+  if(add === 0) add = 7;
+
+  d.setDate(d.getDate() + add);
+
+  if(dayEl){
+    dayEl.value = d.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+  }
+
+  if(dateEl){
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    dateEl.value = `${mm}/${dd}/${yyyy}`;
+  }
+}
+
+function loadSample(){
+  document.querySelectorAll('.sample-fill')
+    .forEach(el => el.classList.remove('sample-fill'));
+
+  const arrival = document.getElementById('arrivaltime');
+  arrival.value = '4:30 AM';
+  arrival.classList.add('sample-fill');
+
+  const pickup = document.getElementById('pickup');
+  pickup.value = '2801 ZINNIA AVE, MCALLEN, TX 78504';
+  pickup.classList.add('sample-fill');
+
+  const dest = document.getElementById('destination');
+  dest.value = 'KICKAPOO CASINO: 794 LUCKY EAGLE DR, EAGLE PASS, TX 78852';
+  dest.classList.add('sample-fill');
+
+  const contact = document.getElementById('contact');
+  contact.value = 'HECTOR ESCAMILLA';
+  contact.classList.add('sample-fill');
+
+  const phone = document.getElementById('phone');
+  phone.value = '(956) 994-1169';
+  phone.classList.add('sample-fill');
+}
+
+function clearAll(){
+  document.querySelectorAll('input').forEach(i=>{
+    i.value = '';
+    i.classList.remove('sample-fill');
+  });
+}
+
+function toggleBounds(){
+  document.body.classList.toggle('show-bounds');
+}
+
+function toggleEnvelope(){
+  document.body.classList.toggle('show-envelope');
+}
+
+function safePrint(){
+  const requiredIds = [
+    'day','tripdate','busno','driver',
+    'arrivaltime','pickup','destination','contact','phone'
+  ];
+
+  const missing = requiredIds.filter(id=>{
+    const el = document.getElementById(id);
+    return !el || !el.value.trim();
+  });
+
+  if(missing.length){
+    alert(
+      "⚠️ Missing required fields.\n\n" +
+      "Fill in all red-placeholder fields before printing."
+    );
+    return;
+  }
+
+  window.print();
+}
+
+function sortDriversAlphabetically(){
+  const container = document.getElementById('driverList');
+  if(!container) return;
+
+  const buttons = Array.from(container.querySelectorAll('.driver-btn'));
+
+  buttons.sort((a, b) =>
+    a.innerText.trim().localeCompare(b.innerText.trim(), undefined, { sensitivity: 'base' })
+  );
+
+  buttons.forEach(btn => container.appendChild(btn));
+}
+
+window.addEventListener('DOMContentLoaded', sortDriversAlphabetically);
+</script>
+
+</body>
+</html>
