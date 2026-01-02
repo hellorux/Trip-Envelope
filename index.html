@@ -25,7 +25,7 @@
 }
 
 @page{
-  size: 6in 9in;
+  size: A5;
   margin: 0;
 }
 
@@ -34,15 +34,9 @@
   --ink:#111;
   --rule:#222;
 
-    --side-gap: 16px;      /* ✅ matches design template spacing feel (like --s-4) */
+  --side-gap: 12px;      /* ✅ adjust this to move BUS/DRIVERS closer/farther */
   --side-width: 200px;   /* width of BUS / DRIVERS columns */
   --outer-pad: 10px;     /* padding around the whole layout */
-    /* ✅ shared frame width so Autofill + Layout outer edges match perfectly */
-  --frame-width: calc(5.83in + (2 * var(--side-width)) + (2 * var(--side-gap)));
-  
-  --env-w: 5.83in;
-  --env-h: 8.27in;
-
 
   /* single unified line weight */
   --border: 1px;
@@ -225,7 +219,7 @@ body{
 /* ---------- Controls (screen-only, match Preview inset) ---------- */
 .controls{
   display:block;
-  margin: 10px 0 10px;
+  margin: 10px 0 0px; /* bottom margin removed so the box padding is the only gap */
   padding: 0;
 }
 
@@ -254,12 +248,9 @@ body{
 /* ---------- Quick Actions (Autofill + Date buttons container) ---------- */
 .quick-actions-box{
   width: 100%;
-
-  /* Match the OUTER EDGES of the BUS/ENVELOPE/DRIVERS columns.
-     The layout has padding (--outer-pad) inside --frame-width,
-     so we subtract it here to align to the same left/right edges. */
-  max-width: calc(var(--frame-width) - (2 * var(--outer-pad)));
-
+  max-width: calc(
+    5.8in + (2 * var(--side-width)) + (2 * var(--side-gap))
+  );
   margin: 0 auto;
 
   padding: var(--s-3);
@@ -317,21 +308,27 @@ body{
   max-width: var(--frame-width);
 
   margin: 0 auto;
-  padding: var(--outer-pad);
+
+  /* ✅ IMPORTANT:
+     Remove top padding so the gap does NOT stack with .controls margin */
+  padding: 0 var(--outer-pad) var(--outer-pad);
+
+  /* ✅ Screen-only: pull the envelope preview up by 12px to remove the "double gap" look */
+  margin-top: -12px;
+
   flex-wrap: nowrap;
 }
 
 .side{
   flex: 0 0 var(--side-width);
   width: var(--side-width);
-
-  height: var(--env-h);          /* ✅ EXACT match to envelope height */
-
   display:flex;
   flex-direction:column;
-  gap: 8px;
+  gap:8px;
 
-  overflow: hidden;              /* ✅ panel stays fixed; inner list can scroll */
+  height: 8.1in;
+  max-height: 8.1in;
+  overflow: hidden; /* prevent whole panel scroll */
 
   background: var(--card);
   border: 1px solid #e3e6eb;
@@ -349,20 +346,6 @@ body{
   margin-bottom:4px;
   color: #111;
 }
-
-.bus-list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-
-  flex: 1 1 auto;     /* ✅ fills remaining height inside side panel */
-  min-height: 0;      /* ✅ required for scrolling in flex children */
-  overflow-y: auto;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.bus-list::-webkit-scrollbar{ display:none; }
 
 /* Driver toggle row = 2 equal columns */
 .driver-grid{
@@ -512,15 +495,13 @@ body{
 
 /* ---------- Page (print artifact) — DO NOT CHANGE DIMENSIONS ---------- */
 .page{
-  width: var(--env-w) !important;
-  height: var(--env-h) !important;
-  margin: 0 auto !important;
-  transform: none !important;
-
-  page-break-after: auto !important;
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-  overflow: hidden !important;
+  width:5.8in;
+  height:8.1in;
+  padding: var(--pad);
+  margin: 0;
+  overflow: hidden;
+  position:relative;
+  background: transparent;
 }
 
 .panel{
@@ -528,10 +509,7 @@ body{
   height:100%;
   padding: var(--panel-pad);
   padding-top: calc(var(--panel-pad) + 0.25in);
-
-  /* Keep NOTES inside the Print Bounds safe zone */
-  padding-bottom: calc(var(--panel-pad) + 0.18in);
-
+  padding-bottom: var(--panel-pad);
   display:flex;
   flex-direction:column;
   gap: var(--section-gap);
@@ -741,13 +719,12 @@ input:focus{ outline:none; }
 
 .note-line{
   font-family: var(--mono);
-  font-size: 0.12in;      /* slightly smaller than structured fields */
-  font-weight:600;       /* lighter than labels, matches “notes” intent */
+  font-size: 0.13in;
+  font-weight:700;
   height:0.16in;
   border:none;
   border-bottom: var(--underline);
   padding:0 0.02in;
-  opacity:0.9;           /* subtle de-emphasis */
 }
 
 /* Print bounds debug */
@@ -756,7 +733,11 @@ input:focus{ outline:none; }
   outline-offset: -2px;
 }
 .show-bounds .page::after{
-  content:none; /* ✅ remove inner safe zone line */
+  content:"";
+  position:absolute;
+  inset: 0.18in;
+  border: 1px dotted blue;
+  pointer-events:none;
 }
 
 /* Envelope preview */
@@ -774,14 +755,35 @@ input:focus{ outline:none; }
   html, body{
     margin: 0 !important;
     padding: 0 !important;
-    background:#fff !important;
-    color:#000 !important;
+    background:#fff;
+    color:#000;
     font-family: var(--font-family);
   }
 
-  /* Keep ONLY the envelope printing */
+  /* Remove screen layout spacing that can push content onto a new sheet */
+  .app{
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .screen-only{ display:none !important; }
   .print-only{ display:block !important; }
+
+  /* Center the single A5 page */
+  .layout{
+    padding:0 !important;
+    gap:0 !important;
+    display:flex !important;
+    justify-content:center !important;
+    align-items:flex-start !important;
+  }
+
+  .page{
+    margin: 0 auto !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 
   .controls,
   .side,
@@ -789,42 +791,8 @@ input:focus{ outline:none; }
     display:none !important;
   }
 
-  /* Remove screen wrapper spacing that can create an extra blank page */
-  .app{
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Center the envelope area inside the 6x9 printed sheet */
-  .layout{
-    margin: 0 !important;
-    padding: 0 !important;
-    gap: 0 !important;
-
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-
-    /* Make the flex box match the physical page so centering is stable */
-    width: 6in !important;
-    height: 9in !important;
-  }
-
-  /* Keep your envelope content as A5-sized inside the 6x9 sheet */
-  .page{
-    width: 5.83in !important;   /* A5 width */
-    height: 8.27in !important;  /* A5 height */
-    margin: 0 !important;
-
-    page-break-after: auto !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    overflow: hidden !important;
-  }
-
-  .show-bounds .page{ outline:none !important; }
-  .show-bounds .page::after{ content:none !important; }
+  .show-bounds .page{ outline:none; }
+  .show-bounds .page::after{ content:none; }
 
   .show-envelope .page{
     background: transparent !important;
@@ -863,10 +831,10 @@ input:focus{ outline:none; }
     <div class="quick-actions-label">Autofill</div>
 <div class="btn-row">
   <button class="btn" type="button" onclick="loadAutofill1()">Kickapoo Trip</button>
-  <button class="btn" type="button" onclick="loadAutofill2()">Paragon Trip</button>
-  <button class="btn" type="button" onclick="loadAutofill3()">Autofill 3</button>
-  <button class="btn" type="button" onclick="loadAutofill4()">Autofill 4</button>
-  <button class="btn" type="button" onclick="loadAutofill5()">Autofill 5</button>
+<button class="btn" type="button" onclick="loadAutofill2()">Paragon Trip</button>
+<button class="btn" type="button" onclick="loadAutofill3()" disabled>Autofill 3</button>
+<button class="btn" type="button" onclick="loadAutofill4()" disabled>Autofill 4</button>
+<button class="btn" type="button" onclick="loadAutofill5()">MVM Trip</button>
 </div>
   </div>
 
@@ -893,22 +861,20 @@ input:focus{ outline:none; }
 <aside class="side side-left">
   <div class="side-title">BUSES</div>
 
-  <div class="bus-list">
-    <button class="bus-btn bus-charcoal" type="button" onclick="setBus('218', this)">218</button>
-    <button class="bus-btn bus-charcoal" type="button" onclick="setBus('763', this)">763</button>
+  <button class="bus-btn bus-charcoal" type="button" onclick="setBus('218', this)">218</button>
+  <button class="bus-btn bus-charcoal" type="button" onclick="setBus('763', this)">763</button>
 
-    <button class="bus-btn bus-black" type="button" onclick="setBus('470', this)">470</button>
-    <button class="bus-btn bus-yellow" type="button" onclick="setBus('133', this)">133</button>
-    <button class="bus-btn bus-black" type="button" onclick="setBus('506', this)">506</button>
+  <button class="bus-btn bus-black" type="button" onclick="setBus('470', this)">470</button>
+  <button class="bus-btn bus-yellow" type="button" onclick="setBus('133', this)">133</button>
+  <button class="bus-btn bus-black" type="button" onclick="setBus('506', this)">506</button>
 
-    <button class="bus-btn bus-gold" type="button" onclick="setBus('746', this)">746</button>
-    <button class="bus-btn bus-teal" type="button" onclick="setBus('607', this)">607</button>
+  <button class="bus-btn bus-gold" type="button" onclick="setBus('746', this)">746</button>
+  <button class="bus-btn bus-teal" type="button" onclick="setBus('607', this)">607</button>
 
-    <button class="bus-btn bus-white" type="button" onclick="setBus('897', this)">897</button>
-    <button class="bus-btn bus-white" type="button" onclick="setBus('898', this)">898</button>
+  <button class="bus-btn bus-white" type="button" onclick="setBus('897', this)">897</button>
+  <button class="bus-btn bus-white" type="button" onclick="setBus('898', this)">898</button>
 
-    <button class="bus-btn bus-red" type="button" onclick="setBus('474', this)">474</button>
-  </div>
+  <button class="bus-btn bus-red" type="button" onclick="setBus('474', this)">474</button>
 </aside>
 
   <div class="page">
@@ -1353,38 +1319,26 @@ function loadAutofill4(){
     phone.classList.add('sample-fill');
   }
 }
-/* Autofill 5 — placeholder (edit values later) */
+/* Autofill 5 — Pickup + Contact only */
 function loadAutofill5(){
   document.querySelectorAll('.sample-fill')
     .forEach(el => el.classList.remove('sample-fill'));
 
-  const arrival = document.getElementById('arrivaltime');
-  if(arrival){
-    arrival.value = '8:00 AM';
-    arrival.classList.add('sample-fill');
-  }
-
   const pickup = document.getElementById('pickup');
   if(pickup){
-    pickup.value = '2801 ZINNIA AVE, MCALLEN, TX 78504';
+    pickup.value = 'MVM 220 S K CENTER ST, MCALLEN, TX 78501';
     pickup.classList.add('sample-fill');
-  }
-
-  const dest = document.getElementById('destination');
-  if(dest){
-    dest.value = 'AUTOFILL 5 DESTINATION (EDIT LATER)';
-    dest.classList.add('sample-fill');
   }
 
   const contact = document.getElementById('contact');
   if(contact){
-    contact.value = 'AUTOFILL 5 CONTACT (EDIT LATER)';
+    contact.value = 'ESCAMILLA TOUR BUSES';
     contact.classList.add('sample-fill');
   }
 
   const phone = document.getElementById('phone');
   if(phone){
-    phone.value = '(956) 000-0000';
+    phone.value = '(956) 648-9691';
     phone.classList.add('sample-fill');
   }
 }
