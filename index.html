@@ -1350,7 +1350,7 @@ function clearAll(){
     i.value = '';
     i.classList.remove('sample-fill');
   });
-  loadedEnvelopeKey = null; // Clear loaded envelope tracking
+  loadedEnvelopeID = null; // Clear loaded envelope tracking
 }
 
 function toggleBounds(){
@@ -1388,7 +1388,7 @@ function safePrint(){
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywdzzwTUpP_Mkw3BLRTSxLsStJuzeSNI-4zbeIXSZcjirB5-dhHpOXDc0fUVfoZHrk/exec'; // Same URL as your existing Trips API
 
 // Track currently loaded envelope for updates
-let loadedEnvelopeKey = null;
+let loadedEnvelopeID = null;
 
 function saveToSheet(){
   const requiredIds = [
@@ -1435,13 +1435,13 @@ function saveToSheet(){
 
   // Determine if this is an update or new save
   const formData = {
-    action: loadedEnvelopeKey ? "envelope_update" : "envelope_save",
+    action: loadedEnvelopeID ? "envelope_update" : "envelope_save",
     row: rowData
   };
 
-  // If updating, include the original key to identify the row
-  if(loadedEnvelopeKey){
-    formData.originalKey = loadedEnvelopeKey;
+  // If updating, include the envelope ID to identify the row
+  if(loadedEnvelopeID){
+    formData.envelopeID = loadedEnvelopeID;
   }
 
   // Send to Google Sheet
@@ -1454,9 +1454,9 @@ function saveToSheet(){
     if(data.ok){
       const message = data.mode === 'envelope_updated' ? '✅ Envelope updated successfully!' : '✅ Envelope saved successfully!';
       alert(message);
-      // Set the key for future updates (in case it was a new save)
-      if(data.mode === 'envelope_saved'){
-        loadedEnvelopeKey = `${rowData.day}|${rowData.tripdate}|${rowData.busno}`;
+      // Store the envelope ID for future updates
+      if(data.envelopeID){
+        loadedEnvelopeID = data.envelopeID;
       }
     } else {
       alert('❌ Error: ' + (data.error || data.message || 'Unknown error'));
@@ -1569,8 +1569,8 @@ function loadFromSheet(){
     document.getElementById('notes2').value = envelope['Notes 2'] || '';
     document.getElementById('notes3').value = envelope['Notes 3'] || '';
 
-    // Store the key for this envelope so we can update it later
-    loadedEnvelopeKey = `${envelope['Day']}|${envelope['Trip Date']}|${envelope['Bus #']}`;
+    // Store the envelope ID for future updates
+    loadedEnvelopeID = envelope['Envelope ID'] || null;
 
     alert('✅ Envelope loaded successfully!');
   })
@@ -1597,4 +1597,3 @@ window.addEventListener('DOMContentLoaded', sortDriversAlphabetically);
 
 </body>
 </html>
-
