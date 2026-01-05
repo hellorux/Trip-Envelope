@@ -1350,6 +1350,7 @@ function clearAll(){
     i.value = '';
     i.classList.remove('sample-fill');
   });
+  loadedEnvelopeKey = null; // Clear loaded envelope tracking
 }
 
 function toggleBounds(){
@@ -1386,6 +1387,9 @@ function safePrint(){
 // Replace this URL with your Google Apps Script deployment URL
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywdzzwTUpP_Mkw3BLRTSxLsStJuzeSNI-4zbeIXSZcjirB5-dhHpOXDc0fUVfoZHrk/exec'; // Same URL as your existing Trips API
 
+// Track currently loaded envelope for updates
+let loadedEnvelopeKey = null;
+
 function saveToSheet(){
   const requiredIds = [
     'day','tripdate','busno','driver',
@@ -1411,26 +1415,34 @@ function saveToSheet(){
   }
 
   // Collect form data
-  const formData = {
-    action: "envelope_save",
-    row: {
-      day: document.getElementById('day').value,
-      tripdate: document.getElementById('tripdate').value,
-      busno: document.getElementById('busno').value,
-      driver: document.getElementById('driver').value,
-      codriver: document.getElementById('codriver').value,
-      arrivaltime: document.getElementById('arrivaltime').value,
-      pickup: document.getElementById('pickup').value,
-      destination: document.getElementById('destination').value,
-      contact: document.getElementById('contact').value,
-      phone: document.getElementById('phone').value,
-      startodo: document.getElementById('startodo').value,
-      endodo: document.getElementById('endodo').value,
-      notes1: document.getElementById('notes1').value,
-      notes2: document.getElementById('notes2').value,
-      notes3: document.getElementById('notes3').value
-    }
+  const rowData = {
+    day: document.getElementById('day').value,
+    tripdate: document.getElementById('tripdate').value,
+    busno: document.getElementById('busno').value,
+    driver: document.getElementById('driver').value,
+    codriver: document.getElementById('codriver').value,
+    arrivaltime: document.getElementById('arrivaltime').value,
+    pickup: document.getElementById('pickup').value,
+    destination: document.getElementById('destination').value,
+    contact: document.getElementById('contact').value,
+    phone: document.getElementById('phone').value,
+    startodo: document.getElementById('startodo').value,
+    endodo: document.getElementById('endodo').value,
+    notes1: document.getElementById('notes1').value,
+    notes2: document.getElementById('notes2').value,
+    notes3: document.getElementById('notes3').value
   };
+
+  // Determine if this is an update or new save
+  const formData = {
+    action: loadedEnvelopeKey ? "envelope_update" : "envelope_save",
+    row: rowData
+  };
+
+  // If updating, include the original key to identify the row
+  if(loadedEnvelopeKey){
+    formData.originalKey = loadedEnvelopeKey;
+  }
 
   // Send to Google Sheet
   fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -1440,7 +1452,12 @@ function saveToSheet(){
   .then(response => response.json())
   .then(data => {
     if(data.ok){
-      alert('✅ Trip saved successfully!');
+      const message = data.mode === 'envelope_updated' ? '✅ Envelope updated successfully!' : '✅ Envelope saved successfully!';
+      alert(message);
+      // Set the key for future updates (in case it was a new save)
+      if(data.mode === 'envelope_saved'){
+        loadedEnvelopeKey = `${rowData.day}|${rowData.tripdate}|${rowData.busno}`;
+      }
     } else {
       alert('❌ Error: ' + (data.error || data.message || 'Unknown error'));
     }
@@ -1552,6 +1569,9 @@ function loadFromSheet(){
     document.getElementById('notes2').value = envelope['Notes 2'] || '';
     document.getElementById('notes3').value = envelope['Notes 3'] || '';
 
+    // Store the key for this envelope so we can update it later
+    loadedEnvelopeKey = `${envelope['Day']}|${envelope['Trip Date']}|${envelope['Bus #']}`;
+
     alert('✅ Envelope loaded successfully!');
   })
   .catch(error => {
@@ -1577,3 +1597,4 @@ window.addEventListener('DOMContentLoaded', sortDriversAlphabetically);
 
 </body>
 </html>
+
