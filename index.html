@@ -1485,21 +1485,24 @@ function loadFromSheet(){
     // Create a selection dialog
     let options = 'Select an envelope to load:\n\n';
     data.rows.forEach((row, index) => {
-      // Get trip date and parse to get day name
-      const dateRaw = row['Trip Date'] || '';
+      // Try to get trip date from multiple possible keys
+      const dateRaw = row['Trip Date'] || row['tripdate'] || row['Date'] || '';
       let dayText = '?';
       let tripDateStr = '?';
       if (dateRaw) {
-        const d = new Date(dateRaw);
+        let d = new Date(dateRaw);
+        // If ISO string with timezone, try to parse just the date part
+        if (isNaN(d.getTime()) && typeof dateRaw === 'string' && dateRaw.includes('T')) {
+          d = new Date(dateRaw.split('T')[0]);
+        }
         if (!isNaN(d.getTime())) {
-          // Get day name in uppercase (e.g., MONDAY)
           dayText = d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-          // Format date as YYYY-MM-DD
           tripDateStr = d.toISOString().slice(0, 10);
         }
       }
-      const bus = row['Bus #'] || '?';
-      const driver = row['Driver'] || '?';
+      // Try to get bus and driver from multiple possible keys
+      const bus = row['Bus #'] || row['busno'] || row['Bus'] || '?';
+      const driver = row['Driver'] || row['driver'] || '?';
       options += `${index + 1}. ${dayText} ${tripDateStr} – ${bus} – ${driver}\n`;
     });
     
